@@ -62,13 +62,16 @@ app.use(methodOverride('_method'))
 
 
 
-
-app.get("/", checkAuthenticated, (req, res) => {
-  req.session.viewCount +=1
-  console.log('youve been here: ',req.session.viewCount)
-  res.render('index.ejs',{name:req.user.name})
-  // res.sendFile(path.resolve(__dirname, "../index.html"));
+app.get("/", 
+// checkAuthenticated, 
+(req, res) => {
+  console.log(req.session)
+  // req.session.viewCount +=1
+  // console.log('youve been here: ',req.session.viewCount)
+  // res.render('index.ejs',{name:req.user.name})
+  res.sendFile(path.resolve(__dirname, "../index.html"));
 });
+
 
 
 app.get('/login',checkNotAuthenticated, (req,res)=>{
