@@ -19,21 +19,57 @@ const flash = require('express-flash');
 const passport = require('passport');
 const session = require('express-session')
 const methodOverride = require('method-override')
+const db = require('../models/userModel');
 
-initializePassport(
-  passport,
-  email => fakeDbContent.find(user => user.email === email),
-  id => fakeDbContent.find(user => user.id === id)
-)
+//pg connection
+// const {Pool} = require('pg')
+// const PG_URI = 'postgres://omfrgiuo:ybRG4dCelKJOxOig-4Y1NL64EewpdrHY@ziggy.db.elephantsql.com:5432/omfrgiuo'
+// const pool = new Pool({
+//     connectionString: PG_URI
+//   });
+
+///// testing sequelize db connection
+
+// const { Sequelize } = require('sequelize');
+
+// // Option 1: Passing a connection URI
+// const sequelize = new Sequelize('postgres://omfrgiuo:ybRG4dCelKJOxOig-4Y1NL64EewpdrHY@ziggy.db.elephantsql.com:5432/omfrgiuo') // Example for postgres
+// const connectTest = async ()=>{
+//   try {
+//     await sequelize.authenticate();
+//     console.log('-------------------DATABASE Connection has been established successfully.------------------------------------------------');
+//   } catch (error) {
+//     console.error('----------------------Unable to connect to the database:---------------------------', error);
+//   }
+// }
+// connectTest()
+
+//////
+  // pool.query("CREATE TABLE accounts (user_id serial PRIMARY KEY, username VARCHAR ( 50 ) UNIQUE NOT NULL, password VARCHAR ( 50 ) NOT NULL,email VARCHAR ( 255 ) UNIQUE NOT NULL, created_on TIMESTAMP NOT NULL, last_login TIMESTAMP);")
+  //  .then((data)=>{console.log(data)})
+  // pool.query("DROP TABLE accounts;")
+  //  .then((data)=>{rconsole.log(data)})
+  
+  // const { Sequelize } = require('sequelize');
+  
+  // Option 1: Passing a connection URI
+  // const sequelize = new Sequelize('postgres://psnlykfs:BJc1JgNzXl1elMMu1eYlVEXh5KbLJjSp@ziggy.db.elephantsql.com:5432/psnlykfs') // Example for postgres
+  
+  // try {
+    //   await sequelize.authenticate();
+    //   console.log('Connection has been established successfully.');
+    // } catch (error) {
+      //   console.error('Unable to connect to the database:', error);
+      // }
+      /**
+       * handle parsing request body
+       */
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 app.set('view-engine','ejs')
-// const connect = mongoose.connect(url, { useNewUrlParser: true });
-// connect.then((db) => {
-//       console.log('Connected correctly to server!');
-// }, (err) => {
-//       console.log(err);
-// });
 app.use(bodyParser.json());
 app.use('*', cors());
+app.use(methodOverride('_method'))
 const fakeDbContent = [
   // {
   //      id: '1615333456941',
@@ -42,32 +78,43 @@ const fakeDbContent = [
   //     password: '$2b$10$pytqCljQESdRtgJ4hZocNecaAmRUG/C0H2rsDjFZrUd79X.3tv88G'//danny
   //   },
   ]
-//Jordan added this
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-
 app.use('/build', express.static(path.resolve(__dirname, '../build')));
 app.use(flash());
+const server = new ApolloServer({ 
+    introspection: true, 
+    playground: true,
+    resolvers, 
+    typeDefs });
+
+server.applyMiddleware({ app });
+
 app.use(session({
-  secret: process.env.SESSION_SECRET,
-  resave:false,
-  saveUninitialized:false,
-  })
-  );
+    secret: process.env.SESSION_SECRET,
+    resave:false,
+    saveUninitialized:false,
+    })
+    );
+
+
+initializePassport(
+  passport,
+  email => fakeDbContent.find(user => user.email === email),
+  id => fakeDbContent.find(user => user.id === id)
+)
+
 //intializes passport for all requests
 app.use(passport.initialize())
 
 app.use(passport.session())
-app.use(methodOverride('_method'))
 
 
 
 app.get("/", 
-// checkAuthenticated, 
+checkAuthenticated, 
 (req, res) => {
   console.log(req.session)
-  // req.session.viewCount +=1
-  // console.log('youve been here: ',req.session.viewCount)
+  req.session.viewCount +=1
+  console.log('youve been here: ',req.session.viewCount)
   // res.render('index.ejs',{name:req.user.name})
   res.sendFile(path.resolve(__dirname, "../index.html"));
 });
@@ -102,40 +149,27 @@ res.redirect('/register')
  console.log(fakeDbContent)
 })
 
-const server = new ApolloServer({ 
-  introspection: true, 
-  playground: true,
-  resolvers, 
-  typeDefs });
 
-// const mongoServer = new ApolloServer({
-//   interospection: true,
-//   playgroud: true,
-//   typeDefs: mongoSchema,
-//   resolvers
-// })
-
-server.applyMiddleware({ app });
 
 // app.use((req, res) => {
 //   res.status(200);
 //   res.send('Hello!');
 //   res.end();
 // });
-
+// handle logout
 app.delete('/logout', (req, res) => {
   req.logOut()
   console.log('logged out now....')
   res.redirect('/login')
 })
-
+// check to see if a user is authenticated
 function checkAuthenticated(req,res,next){
   if (req.isAuthenticated()){
     return next()
   }
  res.redirect('/login')
 }
-
+// check to see if a user is NOT authenticated
 function checkNotAuthenticated(req, res, next) {
   if (req.isAuthenticated()) { //passport feature
     return res.redirect('/')
